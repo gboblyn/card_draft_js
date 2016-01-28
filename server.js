@@ -1,13 +1,13 @@
-let app = require('express')();
+let express = require('express');
+let app = express();
 let bodyParser = require('body-parser');
 let db = require('./goose.js');
 let Draft = require('./models/draft.js');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('static'));
 
-// Randomly selects a <size> cards from <pool>
-// to create a source deck.
 function generateDecks(pool, size, count) {
 	let source_decks = [];
 	let temp_pool = pool.slice();
@@ -23,10 +23,6 @@ function generateDecks(pool, size, count) {
 
 	return source_decks;
 }
-
-app.get('/', (req, res) => {
-	res.send('index.html');
-});
 
 app.get('/join/:id', (req, res) => {
 	Draft.findById(req.params.id, (err, draft) => {
