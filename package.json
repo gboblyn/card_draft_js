@@ -1,0 +1,32 @@
+{
+  "name": "drafty",
+  "version": "0.0.1",
+  "description": "An online card drafting service.",
+  "main": "server.js",
+  "dependencies": {
+    "mongoose": "^4.3.7"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "make test",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/gboblyn/drafty.git"
+  },
+  "keywords": [
+    "cards",
+    "draft",
+    "drafty",
+    "mongoose",
+    "mongo",
+    "nodejs"
+  ],
+  "author": "Gage Lynch",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gboblyn/drafty/issues"
+  },
+  "homepage": "https://github.com/gboblyn/drafty#readme"
+}
