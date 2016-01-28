@@ -4,7 +4,12 @@ var Draft = require('./models/draft.js');
 
 // Randomly selects a <size> cards from <pool>
 // to create a source deck.
-function generateDeck(pool, size) {
+function generateDecks(pool, size, count) {
+	var source_decks;
+
+	for (var i = 0; i < count; i++) {
+		
+	}
 }
 
 function pickCard(id, source) {
@@ -13,6 +18,7 @@ function pickCard(id, source) {
 	}
 }
 
+// TODO: Error handling
 app.post('/create', (req, res) => {
 	let q;
 	let draft = new Draft();
@@ -23,7 +29,7 @@ app.post('/create', (req, res) => {
 		res.send('No input\n');
 	}
 	if (q.name) draft.name = q.name;
-	if (q.count) draft.open_slots = q.count;
+	if (q.player_count) draft.open_slots = q.player_count;
 	if (q.pool) draft.pool = q.pool;
 	if (q.size) {
 		generateDecks(pool, size, count);
@@ -32,7 +38,7 @@ app.post('/create', (req, res) => {
 
 app.post(':draft/pick/:card', (req, res) => {
 	if (req.params.draft) {
-		let draft = getDraft(req.params.draft);
+		let draft = Draft.find(req.params.draft);
 	}
 	res.send('Pick a Card');
 });
