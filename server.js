@@ -14,18 +14,20 @@ function pickCard(id, source) {
 }
 
 app.post('/create', (req, res) => {
-	var player_count;
-	var source_size;
-	var card_pool;
-	var q;
-
+	let q;
 	let draft = new Draft();
 
-	if (req.query) q = req.query;
+	if (req.query) {
+		q = req.query;
+	} else {
+		res.send('No input\n');
+	}
+	if (q.name) draft.name = q.name;
 	if (q.count) draft.open_slots = q.count;
-	if (q.size) source_size = q.size;
-
-	res.send('size = ' + source_size + ' | count = ' + player_count);
+	if (q.pool) draft.pool = q.pool;
+	if (q.size) {
+		generateDecks(pool, size, count);
+	}
 });
 
 app.post(':draft/pick/:card', (req, res) => {
