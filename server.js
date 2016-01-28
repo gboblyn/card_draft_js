@@ -1,12 +1,16 @@
 let app = require('express')();
+let bodyParser = require('body-parser');
 let db = require('./goose.js');
 let Draft = require('./models/draft.js');
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Randomly selects a <size> cards from <pool>
 // to create a source deck.
 function generateDecks(pool, size, count) {
 	let source_decks = [];
-	let temp_pool = pool;
+	let temp_pool = pool.slice();
 
 	for (let i = 0; i < count; i++) {
 		source_decks[i] = [];
@@ -20,43 +24,59 @@ function generateDecks(pool, size, count) {
 	return source_decks;
 }
 
-function pickCard(id, source) {
-	if (source.includes(id)) {
-		return source[id];
+app.get('/', (req, res) => {
+	res.send('index.html');
+});
+
+app.get('/join/:id', (req, res) => {
+	Draft.findById(req.params.id, (err, draft) => {
+		if (err) {
+			console.log(err);
+		} else if (draft.players.indexOf(req.query.name) !== -1) {
+			res.send(draft);
+		} else if (req.query.name && draft.open_slots > 0) {
+			draft.open_slots--;
+
+			if (draft.players === null) draft.players = [];
+			draft.players.push(req.query.name);
+			draft.hands.push({
+					player: req.query.name,
+					cards: draft.source_decks[draft.open_slots]
+			});
+			draft.save();
+			res.send(draft);
+		} else {
+			res.send('Could not join draft');
+		}
+	});
+});
+
+let validateCreateBody = function (req, res, next) {
+	let b = req.body;
+	console.log(`b = ${b}`);
+
+	if (b && b.name && b.player_count && b.pool && b.size) {
+		return next();
+	} else {
+		res.send('Missing input');
 	}
 }
 
-app.get('/join/:id', (req, res) => {
-
-});
-
-// TODO: Error handling
-app.post('/create', (req, res) => {
-	let q;
+app.post('/create', validateCreateBody, (req, res) => {
 	let draft = new Draft();
-
-	if (req.query) {
-		q = req.query;
-	} else {
-		res.send('No input\n');
-	}
-	if (q.name) draft.name = q.name;
-	if (q.player_count) draft.open_slots = q.player_count;
-	if (q.pool) {
-		draft.pool = JSON.parse(q.pool);
-	}
-	if (q.size) {
-		draft.source_decks = generateDecks(draft.pool, q.size, draft.open_slots);
-	}
+	draft.name = req.body.name;
+	draft.open_slots = req.body.player_count;
+	draft.pool = JSON.parse(req.body.pool);
+	draft.source_decks = generateDecks(draft.pool, req.body.size, draft.open_slots);
 
 	draft.save((err, d) => {
 		if (err) {
 			console.log(err);
 		} else {
-			console.log('Draft saved');
+			console.log('Draft successfully saved: ' + d);
 		}
 	});
-	res.send('Draft created');
+	res.send('<a href="localhost:3000/join/' + draft._id + '">Join Draft</a>');
 });
 
 app.post(':draft/pick/:card', (req, res) => {

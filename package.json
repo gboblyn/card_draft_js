@@ -4,7 +4,8 @@
   "description": "An online card drafting service.",
   "main": "server.js",
   "dependencies": {
-    "mongoose": "^4.3.7"
+    "mongoose": "^4.3.7",
+		"body-parser": "^1.14.2"
   },
   "devDependencies": {},
   "scripts": {
