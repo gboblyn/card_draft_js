@@ -1,43 +1,10 @@
-'use strict';
-
 var app = require('express')();
-var goose = require('mongoose');
-goose.connect('mongodb://localhost/test');
-
-var db = goose.connection;
-db.on('error', console.error.bind(console, 'connection error'));
-db.once('open', function() {
-	console.log('mongodb connection successfully opened');
-});
-
-var test_pool = {
-	id: '1',
-	deck: [ 1, 2 ]
-};
-
-var draftSchema = goose.Schema({
-	name: String,
-	players: [String],
-	pool: [{ name: String, body: String }],
-	source_decks: ,
-	hands: [{ player: String, cards: [Number] }]
-)};
-
-
-var global_draft = [];
-	
-function getPool(id) {
-	return test_pool;
-}
-
-function getDraft(id) {
-	return global_draft[id];
-}
+var db = require('./goose.js');
+var Draft = require('./models/draft.js');
 
 // Randomly selects a <size> cards from <pool>
 // to create a source deck.
 function generateDeck(pool, size) {
-
 }
 
 function pickCard(id, source) {
@@ -46,34 +13,29 @@ function pickCard(id, source) {
 	}
 }
 
-function pass() {
-}
-
-// What is needed to create a draft?
-// Player count
-// Card pool
-// Source deck size
-app.post('/create', function(req, res) {
+app.post('/create', (req, res) => {
 	var player_count;
 	var source_size;
 	var card_pool;
 	var q;
 
+	let draft = new Draft();
+
 	if (req.query) q = req.query;
-	if (q.count) player_count = q.count;
+	if (q.count) draft.open_slots = q.count;
 	if (q.size) source_size = q.size;
 
 	res.send('size = ' + source_size + ' | count = ' + player_count);
 });
 
-app.post(':draft/pick/:card', function(req, res) {
+app.post(':draft/pick/:card', (req, res) => {
 	if (req.params.draft) {
 		let draft = getDraft(req.params.draft);
 	}
 	res.send('Pick a Card');
 });
 
-app.get('/pool/:id', function(req, res) {
+app.get('/pool/:id', (req, res) => {
 	if (req.params.id) {
 		var card_pool = getPool(req.params.id);
 		res.send(card_pool);
@@ -82,4 +44,6 @@ app.get('/pool/:id', function(req, res) {
 	}
 });
 
-app.listen(3000);
+app.listen(3000, () => {
+	console.log('Server has started on port 3000');
+});
