@@ -8,7 +8,9 @@ function generateDecks(pool, size, count) {
 	var source_decks;
 
 	for (var i = 0; i < count; i++) {
-		
+		for (var j = 0; j < size; j++) {
+			source_decks[i].push(pool[Math.random() * pool.length]);
+		}
 	}
 }
 
