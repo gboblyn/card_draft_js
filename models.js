@@ -6,7 +6,7 @@ let handSchema = mongoose.Schema({
 		required: true
 	},
 	source: {
-		type: Number,
+		type: mongoose.Schema.Types.ObjectId,
 		required: true
 	},
 	cards: {
@@ -19,14 +19,11 @@ let playerSchema = mongoose.Schema({
 	name: {
 		type: String,
 		required: true,
-		unique: true
-	},
-	drafts: {
-		type: mongoose.Schema.Types.ObjectId,
-		required: false
+		unique: true,
+		sparse: true
 	},
 	hands: {
-		type: handSchema,
+		type: [handSchema],
 		required: false
 	}
 });
