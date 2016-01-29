@@ -5,27 +5,27 @@
 	<body>
 		<h1>Draft</h1>
 
-		<h2>Create new draft</h2>
+		<h2>Create New Draft</h2>
 
-		<form method="post" action="http://localhost:3000/create">
+		<form method="post" action="http://localhost:3000/draft/create">
 			<div>
 				<label for="name">Name</label>
-				<input name="name" type="text"/>
+				<input name="name" required type="text"/>
 			</div>
 
 			<div>
 				<label for="player_count">Player Count</label>
-				<input name="player_count" type="text"/>
+				<input name="player_count" required type="text"/>
 			</div>
 
 			<div>
 				<label for="pool">Initial Card Pool</label>
-				<input name="pool" type="text"/>
+				<input name="pool" required type="text"/>
 			</div>
 
 			<div>
 				<label for="size">Initial Deck Size</label>
-				<input name="size" type="text"/>
+				<input name="size" required type="text"/>
 			</div>
 
 			<input type="submit"/>

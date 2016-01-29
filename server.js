@@ -2,7 +2,8 @@ let express = require('express');
 let app = express();
 let bodyParser = require('body-parser');
 let db = require('./goose.js');
-let Draft = require('./models/draft.js');
+let Draft = require('./models.js').Draft;
+let Player = require('./models.js').Player;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -13,16 +14,37 @@ function generateDecks(pool, size, count) {
 	let temp_pool = pool.slice();
 
 	for (let i = 0; i < count; i++) {
-		source_decks[i] = [];
+		source_decks[i] = { player: null, cards: [] };
 
 		for (let j = 0; j < size; j++) {
 			let index = parseInt(Math.random() * (temp_pool.length - 1));
-			source_decks[i].push(temp_pool.splice(index, 1)[0]);
+			source_decks[i].cards.push(temp_pool.splice(index, 1)[0]);
 		}
 	}
 
 	return source_decks;
 }
+
+let validatePlayerCreateBody = (req, res, next) => {
+	if (req.body && req.body.name) {
+		next();
+	} else {
+		res.send('No name given.');
+	}
+};
+
+app.post('/player/create', validatePlayerCreateBody, (req, res) => {
+	let player = new Player();
+	player.name = req.body.name;
+	player.save((err, p) => {
+		if (err) {
+			console.log(err);
+			res.send('Could not create account: ' + err);
+		} else {
+			res.send(p);
+		}
+	});
+});
 
 app.get('/:id/:name/pick', (req, res) => {
 	Draft.findById(req.params.id, (err, draft) => {
@@ -48,32 +70,44 @@ app.get('/:id/:name/pick', (req, res) => {
 	});
 });
 
-app.get('/join/:id', (req, res) => {
+let joinValidation = (req, res, next) => {
 	Draft.findById(req.params.id, (err, draft) => {
 		if (err || !draft) {
 			console.log(err);
-			res.send('Draft not found');
-		} else if (draft.players.indexOf(req.query.name) !== -1) {
-			// TODO: case insensitive check.
+			next('Draft not found.');
+		} else if (draft.players.id(req.query.player_id)) {
 			res.send(draft);
-		} else if (req.query.name && draft.open_slots > 0) {
-			draft.open_slots--;
-
-			if (draft.players === null) draft.players = [];
-			draft.players.push(req.query.name);
-			draft.hands.push({
-					player: req.query.name,
-					cards: draft.source_decks[draft.open_slots]
+		} else if (draft.open_slots <= 0) {
+			next('Could not join draft because draft is full.');
+		} else if (!req.query || !req.query.player_id) {
+			next('No player information found.');
+		} else {
+			Player.findById(req.query.player_id, (err, player) => {
+				if (err || !player) {
+					console.log(err);
+					next('Player not found.');
+				} else {
+					next(null);
+				}
 			});
+		}
+	});
+};
+
+app.put('/draft/:id/join', joinValidation, (req, res, next) => {
+	Draft.findById(req.params.id, (err, draft) => {
+		Player.findById(req.query.player_id, (err, player) => {
+			draft.open_slots--;
+			if (draft.players === null) draft.players = [];
+			draft.players.push(player);
+			draft.source_decks[draft.open_slots].player = player;
 			draft.save();
 			res.send(draft);
-		} else {
-			res.send('Could not join draft');
-		}
+		});
 	});
 });
 
-let validateCreateBody = function (req, res, next) {
+let validateCreateBody = (req, res, next) => {
 	let b = req.body;
 
 	if (b && b.name && b.player_count && b.pool && b.size) {
@@ -88,7 +122,7 @@ let validateCreateBody = function (req, res, next) {
 	}
 };
 
-app.post('/create', validateCreateBody, (req, res) => {
+app.post('/draft/create', validateCreateBody, (req, res) => {
 	let draft = new Draft();
 	draft.name = req.body.name;
 	draft.open_slots = req.body.player_count;
