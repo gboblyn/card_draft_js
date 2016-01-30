@@ -45,35 +45,10 @@ app.get('/player/:id/hands', validate({
 app.get('/draft/:id/:player_id/pick', pickValidation, (req, res) => {
 });
 
-let joinValidation = (req, res, next) => {
-	Draft.findById(req.params.id, (err, draft) => {
-		if (err || !draft) {
-			console.log(err);
-			next('Draft not found.');
-		} else if (draft.players.id(req.query.player_id)) {
-			res.send(draft);
-		} else if (draft.open_slots <= 0) {
-			next('Could not join draft because draft is full.');
-		} else if (!req.query || !req.query.player_id) {
-			next('No player information found.');
-		} else {
-			Player.findById(req.query.player_id, (err, player) => {
-				if (err || !player) {
-					console.log(err);
-					next('Player not found.');
-				} else {
-					req.drafty = { draft: draft, player: player };
-					next(null);
-				}
-			});
-		}
-	});
-};
-
 app.put('/draft/:id/join', validate({
 	params: { id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() },
 	query: { player_id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() }
-}), joinValidation, logic.joinDraft);
+}), logic.joinValidation, logic.joinDraft);
 
 let validateCreateBody = (req, res, next) => {
 	let b = req.body;
