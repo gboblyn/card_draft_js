@@ -36,10 +36,10 @@ let pickValidation = (req, res, next) => {
 };
 
 app.get('/player/:id/hands', validate({
-		params: {
-			id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required(),
-			player_id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required()
-		}
+	params: {
+		id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required(),
+		player_id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required()
+	}
 }), logic.getHands);
 
 app.get('/draft/:id/:player_id/pick', pickValidation, (req, res) => {
@@ -77,8 +77,11 @@ app.put('/draft/:id/join', validate({
 
 let validateCreateBody = (req, res, next) => {
 	let b = req.body;
-	if (b.pool.length < b.player_count * b.size)
-			res.send('Initial card pool too small.');
+	if (b.pool.length < b.player_count * b.size) {
+		return res.send('Initial card pool too small.');
+	} else {
+		return next();
+	}
 };
 
 app.post('/draft/create', validate({

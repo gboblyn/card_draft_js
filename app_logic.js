@@ -2,7 +2,7 @@ let Draft = require('./models.js').Draft;
 let Player = require('./models.js').Player;
 let Hand = require('./models.js').Hand;
 
-function generateDecks(pool, size, count) {
+let generateDecks = (pool, size, count) => {
 	let source_decks = [];
 	let temp_pool = pool.slice();
 
@@ -64,7 +64,7 @@ module.exports = {
 		let draft = new Draft();
 		draft.name = req.body.name;
 		draft.open_slots = req.body.player_count;
-		draft.pool = JSON.parse(req.body.pool);
+		draft.pool = req.body.pool;
 		draft.source_decks = generateDecks(draft.pool, req.body.size, draft.open_slots);
 
 		console.log(draft);
