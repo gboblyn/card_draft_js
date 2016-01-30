@@ -4,9 +4,10 @@
   "description": "An online card drafting service.",
   "main": "server.js",
   "dependencies": {
-    "mongoose": "^4.3.7",
     "body-parser": "^1.14.2",
-		"bootstrap": "^3.3.6"
+    "bootstrap": "^3.3.6",
+    "express-validation": "^0.4.5",
+    "mongoose": "^4.3.7"
   },
   "devDependencies": {},
   "scripts": {

@@ -1,35 +1,20 @@
 let express = require('express');
+let validate = require('express-validation');
 let app = express();
 let bodyParser = require('body-parser');
 let db = require('./goose.js');
-let Draft = require('./models.js').Draft;
-let Player = require('./models.js').Player;
-let Hand = require('./models.js').Hand;
+let Joi = require('joi');
+let logic = require('./app_logic.js');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('static'));
 
-let validatePlayerCreateBody = (req, res, next) => {
-	if (req.body && req.body.name) {
-		next();
-	} else {
-		res.send('No name given.');
+app.post('/player/create', validate({
+	body: {
+		name: Joi.string().required()
 	}
-};
-
-app.post('/player/create', validatePlayerCreateBody, (req, res) => {
-	let player = new Player();
-	player.name = req.body.name;
-	player.save((err, p) => {
-		if (err) {
-			console.log(err);
-			res.send('Could not create account: ' + err);
-		} else {
-			res.send(p);
-		}
-	});
-});
+}), logic.createPlayer);
 
 let pickValidation = (req, res, next) => {
 	Draft.findById(req.params.id, (err, draft) => {
@@ -49,6 +34,13 @@ let pickValidation = (req, res, next) => {
 		}
 	});
 };
+
+app.get('/player/:id/hands', validate({
+		params: {
+			id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required(),
+			player_id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required()
+		}
+}), logic.getHands);
 
 app.get('/draft/:id/:player_id/pick', pickValidation, (req, res) => {
 });
@@ -78,74 +70,25 @@ let joinValidation = (req, res, next) => {
 	});
 };
 
-app.put('/draft/:id/join', joinValidation, (req, res, next) => {
-	let draft = req.drafty.draft;
-	let player = req.drafty.player;
-	draft.open_slots--;
-	if (draft.players === null) draft.players = [];
-	draft.players.push(player);
-	draft.source_decks[draft.open_slots].player = player;
-	draft.save();
-
-	if (!player.hands) player.hands = [];
-	player.hands.push({
-		draft: draft,
-		source: draft.source_decks[draft.open_slots]._id,
-		cards: []
-	});
-
-	player.save();
-	res.send(draft);
-});
-
-function generateDecks(pool, size, count) {
-	let source_decks = [];
-	let temp_pool = pool.slice();
-
-	for (let i = 0; i < count; i++) {
-		source_decks[i] = { player: null, cards: [] };
-
-		for (let j = 0; j < size; j++) {
-			let index = parseInt(Math.random() * (temp_pool.length - 1));
-			source_decks[i].cards.push(temp_pool.splice(index, 1)[0]);
-		}
-	}
-
-	return source_decks;
-}
+app.put('/draft/:id/join', validate({
+	params: { id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() },
+	query: { player_id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() }
+}), joinValidation, logic.joinDraft);
 
 let validateCreateBody = (req, res, next) => {
 	let b = req.body;
-
-	if (b && b.name && b.player_count && b.pool && b.size) {
-		if (b.pool.length < b.player_count * b.size) {
+	if (b.pool.length < b.player_count * b.size)
 			res.send('Initial card pool too small.');
-		} else {
-			return next();
-		}
-	} else {
-		// TODO: route back to create page (index.html).
-		res.send('Missing input');
-	}
 };
 
-app.post('/draft/create', validateCreateBody, (req, res) => {
-	let draft = new Draft();
-	draft.name = req.body.name;
-	draft.open_slots = req.body.player_count;
-	draft.pool = JSON.parse(req.body.pool);
-	draft.source_decks = generateDecks(draft.pool, req.body.size, draft.open_slots);
-
-	console.log(draft);
-	draft.save((err, d) => {
-		if (err) {
-			console.log(err);
-			res.send('Unabled to create draft.');
-		} else {
-			res.send('<a href="localhost:3000/join/' + d._id + '">Join Draft</a>');
-		}
-	});
-});
+app.post('/draft/create', validate({
+	body: {
+		name: Joi.string().required(),
+		player_count: Joi.number().integer().min(2).required(),
+		pool: Joi.array().required(),
+		size: Joi.number().integer().min(2).required()
+	}
+}), validateCreateBody, logic.createDraft);
 
 app.listen(3000, () => {
 	console.log('Server has started on port 3000');
