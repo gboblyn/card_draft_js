@@ -44,12 +44,16 @@ let draftSchema = mongoose.Schema({
 	decks: {
 		type: [handSchema],
 		required: true
+	},
+	hands: {
+		type: [handSchema],
+		required: false
 	}
 });
 
-draftSchema.methods.getPlayerHands = function(name) {
-	let matches = this.decks.filter((decks) => {
-		return decks.player.name === name;
+draftSchema.methods.getPlayerHands = function (name)  {
+	let matches = this.decks.filter((deck) => {
+		return (deck.player && deck.player.name === name);
 	});
 	if (matches.length === 1) {
 		return matches[0];

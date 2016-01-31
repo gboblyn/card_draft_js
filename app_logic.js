@@ -35,12 +35,15 @@ module.exports = {
 		});
 	},
 	getHands: (req, res) => {
-		Draft.find({ 'decks.player.name': req.params.name }, (err, draft) => {
-			if (err || !draft) {
+		Draft.find({ 'decks.player.name': req.params.name }, (err, drafts) => {
+			if (err || !drafts) {
 				console.log(err);
 				res.send('Player not found.');
 			} else {
-				res.send(draft.getPlayerHands(req.params.name));
+				drafts.forEach((draft) => {
+					let hand = draft.getPlayerHands(req.params.name);
+					res.send(hand);
+				});
 			}
 		});
 	},
