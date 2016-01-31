@@ -39,7 +39,7 @@ app.put('/draft/:id/player/:name/pick', validate({
 
 app.get('/draft/:id/join', validate({
 	params: { id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() }
-}, (req, res) => {
+}), (req, res) => {
 	// TODO: Serve join form with appropriate draft id.
 });
 
