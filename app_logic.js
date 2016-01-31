@@ -32,12 +32,28 @@ module.exports = {
 		});
 	},
 	getHands: (req, res) => {
-		Player.findById(req.params.id, (err, player) => {
+		Player.findOne({ name: req.params.name }, (err, player) => {
 			if (err || !player) {
 				console.log(err);
 				res.send('Player not found.');
 			} else {
 				res.send(player.hands);
+			}
+		});
+	},
+	pickValidation: (req, res, next) => {
+		Draft.findById(req.params.id, (err, draft) => {
+			if (err || !draft) {
+				console.log(err);
+				res.send('Draft not found');
+			} else if (!draft.findPlayer(req.params.name)) {
+				res.send('You are not a part of this draft.');
+			} else {
+				req.drafty = {
+					draft: draft,
+					player: draft.findPlayer(req.params.name)
+				};
+				next();
 			}
 		});
 	},
@@ -65,14 +81,14 @@ module.exports = {
 			if (err || !draft) {
 				console.log(err);
 				next('Draft not found.');
-			} else if (draft.players.id(req.query.player_id)) {
+			} else if (draft.players.id(req.query.name)) {
 				res.send(draft);
 			} else if (draft.open_slots <= 0) {
 				next('Could not join draft because draft is full.');
-			} else if (!req.query || !req.query.player_id) {
+			} else if (!req.query || !req.query.name) {
 				next('No player information found.');
 			} else {
-				Player.findById(req.query.player_id, (err, player) => {
+				Player.findOne({ name: req.query.name }, (err, player) => {
 					if (err || !player) {
 						console.log(err);
 						next('Player not found.');
@@ -83,6 +99,14 @@ module.exports = {
 				});
 			}
 		});
+	},
+	validateCreateBody: (req, res, next) => {
+		let b = req.body;
+		if (b.pool.length < b.player_count * b.size) {
+			return res.send('Initial card pool too small.');
+		} else {
+			return next();
+		}
 	},
 	createDraft: (req, res, next) => {
 		let draft = new Draft();

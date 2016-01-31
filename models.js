@@ -51,6 +51,13 @@ let draftSchema = mongoose.Schema({
 	}
 });
 
+draftSchema.methods.findPlayer = function(name) {
+	let matches = this.players.filter((player) => { return player.name === name; });
+	if (matches.length === 1) {
+		return matches[0];
+	}
+};
+
 module.exports = {
 	Draft: mongoose.model('Draft', draftSchema),
 	Player: mongoose.model('Player', playerSchema),
