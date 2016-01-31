@@ -10,10 +10,6 @@ let playerSchema = mongoose.Schema({
 });
 
 let handSchema = mongoose.Schema({
-	draft: {
-		type: mongoose.Schema.Types.ObjectId,
-		required: true
-	},
 	player: {
 		type: playerSchema,
 		required: false
@@ -51,13 +47,17 @@ let draftSchema = mongoose.Schema({
 	}
 });
 
-draftSchema.methods.getPlayerHands = function (name)  {
-	let matches = this.decks.filter((deck) => {
+let filterByPlayerName = (decks, name) => {
+	return decks.filter((deck) => {
 		return (deck.player && deck.player.name === name);
 	});
-	if (matches.length === 1) {
-		return matches[0];
-	}
+};
+
+draftSchema.methods.getPlayerHands = function (name)  {
+	return {
+		decks: filterByPlayerName(this.decks, name),
+		hands: filterByPlayerName(this.hands, name)
+	};
 };
 
 module.exports = {
