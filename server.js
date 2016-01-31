@@ -27,10 +27,7 @@ app.get('/draft/:id/player/:name/pick', validate({
 		id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required(),
 		name: Joi.string().regex(/^[a-zA-Z0-9]*$/).required()
 	}
-}), logic.pickValidation, (req, res) => {
-	req.drafty.draft.source_decks.id(
-	res.send(req.drafty.player);
-});
+}), logic.pickValidation, logic.getHands);
 
 app.put('/draft/:id/player/:name/pick', validate({
 	params: {
@@ -40,6 +37,11 @@ app.put('/draft/:id/player/:name/pick', validate({
 }), logic.pickValidation, (req, res) => {
 });
 
+app.get('/draft/:id/join', validate({
+	params: { id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() }
+}, (req, res) => {
+	// TODO: Serve join form with appropriate draft id.
+});
 
 app.put('/draft/:id/join', validate({
 	params: { id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() },

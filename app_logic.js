@@ -2,12 +2,13 @@ let Draft = require('./models.js').Draft;
 let Player = require('./models.js').Player;
 let Hand = require('./models.js').Hand;
 
-let generateDecks = (pool, size, count) => {
+let generateDecks = (pool, size, count, draft_id) => {
 	let source_decks = [];
 	let temp_pool = pool.slice();
 
 	for (let i = 0; i < count; i++) {
-		source_decks[i] = { player: null, cards: [] };
+		source_decks[i] = new Hand();
+		source_decks[i].draft = draft_id;
 
 		for (let j = 0; j < size; j++) {
 			let index = parseInt(Math.random() * (temp_pool.length - 1));
@@ -32,27 +33,27 @@ module.exports = {
 		});
 	},
 	getHands: (req, res) => {
-		Player.findOne({ name: req.params.name }, (err, player) => {
-			if (err || !player) {
+		Hand.find({
+			player: { name: req.params.name }
+		}, (err, hands) => {
+			if (err || !hands) {
 				console.log(err);
 				res.send('Player not found.');
 			} else {
-				res.send(player.hands);
+				res.send(hands);
 			}
 		});
 	},
 	pickValidation: (req, res, next) => {
-		Draft.findById(req.params.id, (err, draft) => {
-			if (err || !draft) {
+		Hand.findOne({
+			player: { name: req.params.name },
+			draft: req.params.id
+		}, (err, hand) => {
+			if (err || !hand) {
 				console.log(err);
-				res.send('Draft not found');
-			} else if (!draft.findPlayer(req.params.name)) {
-				res.send('You are not a part of this draft.');
+				res.send('Hand not found.');
 			} else {
-				req.drafty = {
-					draft: draft,
-					player: draft.findPlayer(req.params.name)
-				};
+				req.drafty = { hand: hand };
 				next();
 			}
 		});
@@ -66,14 +67,6 @@ module.exports = {
 		draft.source_decks[draft.open_slots].player = player;
 		draft.save();
 
-		if (!player.hands) player.hands = [];
-		player.hands.push({
-			draft: draft,
-			source: draft.source_decks[draft.open_slots]._id,
-			cards: []
-		});
-
-		player.save();
 		res.send(draft);
 	},
 	joinValidation: (req, res, next) => {
@@ -94,7 +87,7 @@ module.exports = {
 						next('Player not found.');
 					} else {
 						req.drafty = { draft: draft, player: player };
-						next(null);
+						next();
 					}
 				});
 			}
@@ -113,7 +106,7 @@ module.exports = {
 		draft.name = req.body.name;
 		draft.open_slots = req.body.player_count;
 		draft.pool = req.body.pool;
-		draft.source_decks = generateDecks(draft.pool, req.body.size, draft.open_slots);
+		draft.source_decks = generateDecks(draft.pool, req.body.size, draft.open_slots, draft.id);
 
 		console.log(draft);
 		draft.save((err, d) => {
@@ -121,7 +114,7 @@ module.exports = {
 				console.log(err);
 				res.send('Unabled to create draft.');
 			} else {
-				res.send('<a href="localhost:3000/join/' + d._id + '">Join Draft</a>');
+				res.send(`<a href="localhost:3000/draft/${d._id}/join">Join Draft</a>`);
 			}
 		});
 	}
