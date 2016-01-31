@@ -8,15 +8,17 @@ module.exports = (app) => {
 			id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required(),
 			name: Joi.string().regex(/^[a-zA-Z0-9]*$/).required()
 		}
-	}), logic.pickValidation, logic.getHands);
+	}), logic.pickValidation, logic.getDeck);
 
 	app.put('/draft/:id/player/:name/pick', validate({
 		params: {
 			id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required(),
-			name: Joi.string().regex(/^a-zA-Z0-9]*$/).required()
+			name: Joi.string().regex(/^[a-zA-Z0-9]*$/).required()
+		},
+		query: {
+			card: Joi.number().integer().required()
 		}
-	}), logic.pickValidation, (req, res) => {
-	});
+	}), logic.pickValidation, logic.pickCard);
 
 	app.get('/draft/:id/join', validate({
 		params: { id: Joi.string().regex(/^[a-zA-Z0-9]*$/).required() }

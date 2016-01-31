@@ -6,16 +6,13 @@ let playerSchema = mongoose.Schema({
 		required: true,
 		unique: true,
 		sparse: true
-	},
+	}
 });
 
-let handSchema = mongoose.Schema({
-	player: {
-		type: playerSchema,
-		required: false
-	},
-	cards: {
-		type: [Number],
+// TODO
+let cardSchema = mongoose.Schema({
+	card: {
+		type: Number,
 		required: false
 	}
 });
@@ -30,7 +27,11 @@ let draftSchema = mongoose.Schema({
 		required: true
 	},
 	players: {
-		type: [playerSchema],
+		type: [{
+			player: playerSchema,
+			deck: mongoose.Schema.ObjectId,
+			hand: [Number]
+		}],
 		required: false
 	},
 	pool: {
@@ -38,30 +39,20 @@ let draftSchema = mongoose.Schema({
 		required: true
 	},
 	decks: {
-		type: [handSchema],
+		type: [{
+			cards: [Number],
+			order: Number
+		}],
 		required: true
-	},
-	hands: {
-		type: [handSchema],
-		required: false
 	}
 });
 
-let filterByPlayerName = (decks, name) => {
-	return decks.filter((deck) => {
-		return (deck.player && deck.player.name === name);
-	});
-};
+draftSchema.methods.findPlayerDecks = function(name) {
 
-draftSchema.methods.getPlayerHands = function (name)  {
-	return {
-		decks: filterByPlayerName(this.decks, name),
-		hands: filterByPlayerName(this.hands, name)
-	};
-};
+}
 
 module.exports = {
 	Draft: mongoose.model('Draft', draftSchema),
 	Player: mongoose.model('Player', playerSchema),
-	Hand: mongoose.model('Hand', handSchema)
+	Card: mongoose.model('Card', cardSchema)
 };

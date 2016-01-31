@@ -1,20 +1,23 @@
 let Draft = require('./models.js').Draft;
 let Player = require('./models.js').Player;
-let Hand = require('./models.js').Hand;
+let Card = require('./models.js').Card;
 
 let generateDecks = (pool, size, count) => {
 	let decks = [];
 	let temp_pool = pool.slice();
 
 	for (let i = 0; i < count; i++) {
-		let hand = new Hand();
+		let deck = {
+			order: i,
+			cards: []
+		};
 
 		for (let j = 0; j < size; j++) {
 			let index = parseInt(Math.random() * (temp_pool.length - 1));
-			hand.cards.push(temp_pool.splice(index, 1)[0]);
+			deck.cards.push(temp_pool.splice(index, 1)[0]);
 		}
 
-		decks.push(hand);
+		decks.push(deck);
 	}
 
 	return decks;
@@ -34,8 +37,8 @@ module.exports = {
 		});
 	},
 	getHands: (req, res) => {
-		Draft.find({ 'players.name': req.params.name }, (err, drafts) => {
-			if (err || !drafts) {
+		Draft.find({ 'players.player.name': req.params.name }, (err, drafts) => {
+			if (err || !drafts.length) {
 				console.log(err);
 				res.send('Player not found.');
 			} else {
@@ -46,34 +49,66 @@ module.exports = {
 			}
 		});
 	},
+	getDeck: (req, res, next) => {
+		res.send(req.drafty.decks);
+	},
 	pickValidation: (req, res, next) => {
-		Hand.findOne({
-			player: { name: req.params.name },
-			draft: req.params.id
-		}, (err, hand) => {
-			if (err || !hand) {
+		Draft.findById(req.params.id, (err, draft) => {
+			if (err || !draft) {
 				console.log(err);
-				res.send('Hand not found.');
+				res.send('Draft not found.');
 			} else {
-				req.drafty = { hand: hand };
+				let decks = draft.getPlayerHands(req.params.name);
+				req.drafty = {
+					draft: draft,
+					deck: decks.deck,
+					hand: decks.hand
+				};
 				next();
 			}
 		});
 	},
+	pickCard: (req, res, next) => {
+		let drafty = req.drafty;
+		let draft = drafty.draft;
+		let index = drafty.deck.cards.indexOf(req.query.card);
+
+		if (index != -1) {
+			let card = draft.decks.id(drafty.deck.id).cards.splice(index, 1);
+
+			if (draft.hands) {
+				draft.hands.push({ cards: [card] });
+			} else {
+				draft.hands.id(drafty.hand.id).cards.push(card);
+			}
+
+			draft.save((err, result) => {
+				if (err || !result) {
+					console.log(err);
+					res.send('Error updating draft.');
+				} else {
+					res.send(result);
+				}
+			});
+		} else {
+			res.send('Card not found');
+		}
+	},
 	joinDraft: (req, res, next) => {
 		let draft = req.drafty.draft;
-		let player = req.drafty.player;
-		let hand = new Hand();
-		hand.player = player;
 
-		draft.open_slots--;
-		if (draft.players === null) draft.players = [];
-		draft.players.push(player);
-		draft.decks[draft.open_slots].player = player;
-		draft.hands.push(hand);
-		draft.save();
-
-		res.send(draft);
+		draft.players.push({
+			player: req.drafty.player,
+			deck: draft.decks[--draft.open_slots]._id,
+			hand: []
+		});
+		draft.save((err, d) => {
+			if (err || !d) {
+				console.log(err);
+				res.send('Error updating draft.');
+			} else
+				res.send(d);
+		});
 	},
 	joinValidation: (req, res, next) => {
 		Draft.findById(req.params.id, (err, draft) => {
@@ -84,8 +119,6 @@ module.exports = {
 				res.send(draft);
 			} else if (draft.open_slots <= 0) {
 				next('Could not join draft because draft is full.');
-			} else if (!req.query || !req.query.name) {
-				next('No player information found.');
 			} else {
 				Player.findOne({ name: req.query.name }, (err, player) => {
 					if (err || !player) {
@@ -102,13 +135,14 @@ module.exports = {
 	validateCreateBody: (req, res, next) => {
 		let b = req.body;
 		if (b.pool.length < b.player_count * b.size) {
-			return res.send('Initial card pool too small.');
+			res.send('Initial card pool too small.');
 		} else {
-			return next();
+			next();
 		}
 	},
 	createDraft: (req, res, next) => {
 		let draft = new Draft();
+		draft.players = [];
 		draft.name = req.body.name;
 		draft.open_slots = req.body.player_count;
 		draft.pool = req.body.pool;
