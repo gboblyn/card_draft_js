@@ -3,20 +3,22 @@ let Player = require('./models.js').Player;
 let Hand = require('./models.js').Hand;
 
 let generateDecks = (pool, size, count, draft_id) => {
-	let source_decks = [];
+	let promises = [];
 	let temp_pool = pool.slice();
 
 	for (let i = 0; i < count; i++) {
-		source_decks[i] = new Hand();
-		source_decks[i].draft = draft_id;
+		let hand = new Hand();
+		hand.draft = draft_id;
 
 		for (let j = 0; j < size; j++) {
 			let index = parseInt(Math.random() * (temp_pool.length - 1));
-			source_decks[i].cards.push(temp_pool.splice(index, 1)[0]);
+			hand.cards.push(temp_pool.splice(index, 1)[0]);
 		}
+
+		promises.push(hand.save());
 	}
 
-	return source_decks;
+	return Promise.all(promises);
 }
 
 module.exports = {
@@ -33,14 +35,12 @@ module.exports = {
 		});
 	},
 	getHands: (req, res) => {
-		Hand.find({
-			player: { name: req.params.name }
-		}, (err, hands) => {
-			if (err || !hands) {
+		Draft.find({ 'decks.player.name': req.params.name }, (err, draft) => {
+			if (err || !draft) {
 				console.log(err);
 				res.send('Player not found.');
 			} else {
-				res.send(hands);
+				res.send(draft.getPlayerHands(req.params.name));
 			}
 		});
 	},
@@ -64,7 +64,7 @@ module.exports = {
 		draft.open_slots--;
 		if (draft.players === null) draft.players = [];
 		draft.players.push(player);
-		draft.source_decks[draft.open_slots].player = player;
+		draft.decks[draft.open_slots].player = player;
 		draft.save();
 
 		res.send(draft);
@@ -106,16 +106,16 @@ module.exports = {
 		draft.name = req.body.name;
 		draft.open_slots = req.body.player_count;
 		draft.pool = req.body.pool;
-		draft.source_decks = generateDecks(draft.pool, req.body.size, draft.open_slots, draft.id);
-
-		console.log(draft);
-		draft.save((err, d) => {
-			if (err) {
-				console.log(err);
-				res.send('Unabled to create draft.');
-			} else {
-				res.send(`<a href="localhost:3000/draft/${d._id}/join">Join Draft</a>`);
-			}
+		generateDecks(draft.pool, req.body.size, draft.open_slots, draft.id).then((decks) => {
+			draft.decks = decks;
+			draft.save((err, d) => {
+				if (err) {
+					console.log(err);
+					res.send('Unabled to create draft.');
+				} else {
+					res.send(`<a href="localhost:3000/draft/${d._id}/join">Join Draft</a>`);
+				}
+			});
 		});
 	}
 };
