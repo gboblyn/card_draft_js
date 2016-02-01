@@ -42,10 +42,13 @@ module.exports = {
 				console.log(err);
 				res.send('Player not found.');
 			} else {
+				let out = { decks: [], hands: [] };
 				drafts.forEach((draft) => {
-					let hands = draft.getPlayerHands(req.params.name);
-					res.send(hands);
+					let draft_decks = draft.findPlayerDecks(req.params.name);
+					out.decks.push(draft_decks.deck);
+					out.hands.push(draft_decks.hands);
 				});
+				res.send(out);
 			}
 		});
 	},
@@ -97,9 +100,11 @@ module.exports = {
 	joinDraft: (req, res, next) => {
 		let draft = req.drafty.draft;
 
+		--draft.open_slots;
 		draft.players.push({
 			player: req.drafty.player,
-			deck: draft.decks[--draft.open_slots]._id,
+			order: draft.open_slots,
+			deck: draft.decks[draft.open_slots]._id,
 			hand: []
 		});
 		draft.save((err, d) => {

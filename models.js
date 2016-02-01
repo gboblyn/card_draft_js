@@ -29,6 +29,7 @@ let draftSchema = mongoose.Schema({
 	players: {
 		type: [{
 			player: playerSchema,
+			order: Number,
 			deck: mongoose.Schema.ObjectId,
 			hand: [Number]
 		}],
@@ -48,7 +49,13 @@ let draftSchema = mongoose.Schema({
 });
 
 draftSchema.methods.findPlayerDecks = function(name) {
-
+	let player = this.players.filter((entry) => {
+		return entry.player.name === name;
+	})[0];
+	return {
+		hand: player.hand,
+		deck: this.decks.id(player.deck)
+	};
 }
 
 module.exports = {
