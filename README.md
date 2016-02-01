@@ -3,6 +3,5 @@
 ## TODO
 
 * Tests
-* View hand
-* Pick
+* Pick (ip)
 * Almost all frontend work

@@ -53,7 +53,10 @@ module.exports = {
 		});
 	},
 	getDeck: (req, res, next) => {
-		res.send(req.drafty.decks);
+		res.send({
+			deck: req.drafty.deck,
+			hand: req.drafty.hand
+		});
 	},
 	pickValidation: (req, res, next) => {
 		Draft.findById(req.params.id, (err, draft) => {
@@ -61,7 +64,7 @@ module.exports = {
 				console.log(err);
 				res.send('Draft not found.');
 			} else {
-				let decks = draft.getPlayerHands(req.params.name);
+				let decks = draft.findPlayerDecks(req.params.name);
 				req.drafty = {
 					draft: draft,
 					deck: decks.deck,
