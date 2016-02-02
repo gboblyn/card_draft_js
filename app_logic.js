@@ -2,28 +2,34 @@ let Draft = require('./models.js').Draft;
 let Player = require('./models.js').Player;
 let Card = require('./models.js').Card;
 
-let generateDecks = (pool, size, count) => {
-	let decks = [];
+let initializePlayers = (pool, size, count) => {
+	let players = [];
 	let temp_pool = pool.slice();
 
 	for (let i = 0; i < count; i++) {
-		let deck = {
-			order: i,
-			cards: []
-		};
+		let deck = [];
 
 		for (let j = 0; j < size; j++) {
 			let index = parseInt(Math.random() * (temp_pool.length - 1));
-			deck.cards.push(temp_pool.splice(index, 1)[0]);
+			deck.push(temp_pool.splice(index, 1)[0]);
 		}
 
-		decks.push(deck);
+		players.push({ player: null, decks: [deck], hand: [] });
 	}
 
-	return decks;
+	return players;
+}
+
+let findNext = (players, current_index) => {
+	if (current_index < players.length - 1) {
+		return players[++current_index]._id;
+	} else {
+		return players[0]._id;
+	}
 }
 
 module.exports = {
+
 	createPlayer: (req, res) => {
 		let player = new Player();
 		player.name = req.body.name;
@@ -36,58 +42,50 @@ module.exports = {
 			}
 		});
 	},
+
 	getHands: (req, res) => {
 		Draft.find({ 'players.player.name': req.params.name }, (err, drafts) => {
 			if (err || !drafts.length) {
 				console.log(err);
 				res.send('Player not found.');
 			} else {
-				let out = { decks: [], hands: [] };
+				let out = [];
 				drafts.forEach((draft) => {
-					let draft_decks = draft.findPlayerDecks(req.params.name);
-					out.decks.push(draft_decks.deck);
-					out.hands.push(draft_decks.hands);
+					out.push(draft.findPlayerDecks(req.params.name));
 				});
 				res.send(out);
 			}
 		});
 	},
+
 	getDeck: (req, res, next) => {
 		res.send({
 			deck: req.drafty.deck,
 			hand: req.drafty.hand
 		});
 	},
+
 	pickValidation: (req, res, next) => {
 		Draft.findById(req.params.id, (err, draft) => {
 			if (err || !draft) {
 				console.log(err);
 				res.send('Draft not found.');
 			} else {
-				let decks = draft.findPlayerDecks(req.params.name);
+				let draft_decks = draft.findPlayerDecks(req.params.name);
+
 				req.drafty = {
 					draft: draft,
-					deck: decks.deck,
-					hand: decks.hand
+					deck: draft_decks.decks[0],
+					hand: draft_decks.hand
 				};
 				next();
 			}
 		});
 	},
+
 	pickCard: (req, res, next) => {
-		let drafty = req.drafty;
-		let draft = drafty.draft;
-		let index = drafty.deck.cards.indexOf(req.query.card);
-
-		if (index != -1) {
-			let card = draft.decks.id(drafty.deck.id).cards.splice(index, 1);
-
-			if (draft.hands) {
-				draft.hands.push({ cards: [card] });
-			} else {
-				draft.hands.id(drafty.hand.id).cards.push(card);
-			}
-
+		let draft = req.drafty.draft;
+		if (draft.pickCard(req.params.name, req.query.card)) {
 			draft.save((err, result) => {
 				if (err || !result) {
 					console.log(err);
@@ -100,16 +98,20 @@ module.exports = {
 			res.send('Card not found');
 		}
 	},
+
 	joinDraft: (req, res, next) => {
 		let draft = req.drafty.draft;
+		let player = req.drafty.player;
 
-		--draft.open_slots;
-		draft.players.push({
-			player: req.drafty.player,
-			order: draft.open_slots,
-			deck: draft.decks[draft.open_slots]._id,
-			hand: []
-		});
+		for (let i = 0; i < draft.players.length; i++) {
+			if (!draft.players[i].player) {
+				--draft.open_slots;
+				draft.players[i].player = player;
+				draft.players[i].pass = findNext(draft.players, i);
+				break;
+			}
+		}
+
 		draft.save((err, d) => {
 			if (err || !d) {
 				console.log(err);
@@ -118,6 +120,7 @@ module.exports = {
 				res.send(d);
 		});
 	},
+
 	joinValidation: (req, res, next) => {
 		Draft.findById(req.params.id, (err, draft) => {
 			if (err || !draft) {
@@ -140,6 +143,7 @@ module.exports = {
 			}
 		});
 	},
+
 	validateCreateBody: (req, res, next) => {
 		let b = req.body;
 		if (b.pool.length < b.player_count * b.size) {
@@ -148,13 +152,13 @@ module.exports = {
 			next();
 		}
 	},
+
 	createDraft: (req, res, next) => {
 		let draft = new Draft();
-		draft.players = [];
 		draft.name = req.body.name;
 		draft.open_slots = req.body.player_count;
 		draft.pool = req.body.pool;
-		draft.decks = generateDecks(draft.pool, req.body.size, draft.open_slots);
+		draft.players = initializePlayers(draft.pool, req.body.size, draft.open_slots);
 		draft.save((err, d) => {
 			if (err) {
 				console.log(err);
