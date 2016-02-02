@@ -51,7 +51,12 @@ module.exports = {
 			} else {
 				let out = [];
 				drafts.forEach((draft) => {
-					out.push(draft.findPlayerDecks(req.params.name));
+					let decks = draft.findPlayerDecks(req.params.name);
+					out.push({
+						draft: draft._id,
+						decks: decks.decks,
+						hand: decks.hand
+					});
 				});
 				res.send(out);
 			}
