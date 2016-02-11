@@ -6,6 +6,7 @@
   "dependencies": {
     "body-parser": "^1.14.2",
     "bootstrap": "^3.3.6",
+    "express": "^4.13.4",
     "express-validation": "^0.4.5",
     "mongoose": "^4.3.7"
   },
